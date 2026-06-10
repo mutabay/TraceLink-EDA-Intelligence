@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - AUTO_SEED=true
+
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/tracelink
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "tracelink", "RETURN 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  neo4j_data:

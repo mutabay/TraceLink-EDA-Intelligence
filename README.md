@@ -81,24 +81,26 @@ Represent relationships between:
 
 ### Violation Correlation
 
-Group related violations instead of treating them independently.
+Group related violations across nets, simulation types, and physical layers.
+
+The correlator uses graph traversal (not simple grouping) to find clusters that span adjacent nets, different simulation domains, and multiple physical layers.
 
 Example:
 
 ```text
-Cluster #3
+Cluster #1 (score: 24)
 
-Root Object:
-DDR_DQ_17
+Root: DDR_DQ[17]
 
-Related:
-- Timing violations
-- Signal integrity warnings
-- Impedance violations
+Violations:
+- DDR_DQ[17]: Crosstalk (SI simulation)
+- DDR_DQ[17]: Timing setup failure (Timing simulation)
+- DDR_DQ[18]: Eye height degraded (SI simulation)  ← adjacent net
+- Board Trace T001: Impedance mismatch (SI simulation)  ← physical path
 
-Affected Objects:
-- Package Ball B17
-- Board Trace T001
+Correlation:
+  Impedance discontinuity on T001 → signal reflections →
+  crosstalk into adjacent DQ[18] → timing margin lost on DQ[17]
 ```
 
 ---
@@ -131,15 +133,13 @@ Examples:
 
 ### Multi-Agent Engineering Reports
 
-Specialized agents generate structured engineering reports:
+Three specialized agents generate structured engineering reports:
 
-* Graph Investigator Agent
-* Violation Correlation Agent
-* Verification Planner Agent
-* Report Writer Agent
-* Validation Agent
+* **Investigator Agent** — Translates natural language questions into Cypher queries against the knowledge graph. Executes queries, observes results, and retries if needed.
+* **Analysis Agent** — Reasons about root causes and explains why violations are correlated using domain knowledge.
+* **Report Agent** — Synthesizes findings into a structured engineering report with recommendations.
 
-Agents operate on structured analysis results rather than replacing deterministic logic.
+The pipeline uses deterministic algorithms for correlation, impact analysis, and verification planning. LLM agents operate at the end of the pipeline — they explain and report, they don't replace the logic.
 
 ---
 
@@ -166,19 +166,42 @@ Agents operate on structured analysis results rather than replacing deterministi
 
 ---
 
+## Quick Start
+
+```bash
+docker-compose up
+```
+
+Open `http://localhost:5000`. Demo data is loaded automatically.
+
+Or run manually:
+
+```bash
+make setup
+make pipeline
+make dashboard
+```
+
+---
+
 ## Project Structure
 
 ```text
 tracelink-eda-intelligence/
 │
 ├── app/
+│   ├── models/          # Pydantic domain models
+│   ├── ingestion/       # Data loading and parsing
+│   ├── graph/           # Neo4j client and queries
+│   ├── analysis/        # Correlator, impact, verification
+│   ├── agents/          # LLM agents (investigator, analysis, report)
+│   └── dashboard/       # Flask app
 ├── data/
-├── docs/
 ├── scripts/
 ├── tests/
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
+├── Makefile
 └── README.md
 ```
 
